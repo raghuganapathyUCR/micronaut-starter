@@ -1,29 +1,44 @@
 import io.micronaut.internal.starter.tasks.GradlePropertiesNextSnapshot
-import io.micronaut.internal.starter.tasks.PropertiesNotSnapshot
-
+import net.ltgt.gradle.errorprone.CheckSeverity
 plugins {
-    id "io.micronaut.internal.starter.aggregator"
+    id 'java'
+    id "net.ltgt.errorprone" version "3.0.1"
+//    id "io.micronaut.internal.starter.aggregator"
     id "io.micronaut.build.internal.dependency-updates"
     // https://github.com/bmuschko/gradle-docker-plugin/issues/1123
     // https://github.com/gradle/gradle/issues/17559
     id("com.bmuschko.docker-remote-api") version "9.0.1" apply false
 }
-
+//apply plugin: 'io.micronaut.internal.starter.aggregator'
+repositories {
+    mavenCentral()
+}
+dependencies {
+    annotationProcessor 'edu.ucr.cs.riple.annotator:annotator-scanner:1.3.6'
+    annotationProcessor "com.uber.nullaway:nullaway:0.10.10"
+    // Optional, some source of nullability annotations.
+    // Not required on Android if you use the support
+    // library nullability annotations.
+    compileOnly "com.google.code.findbugs:jsr305:3.0.2"
+    errorprone "com.google.errorprone:error_prone_core:2.4.0"
+    errorproneJavac "com.google.errorprone:javac:9+181-r4173-1"
+}
+tasks.withType(JavaCompile) {
+    // remove the if condition if you want to run NullAway on test code
+    if (!name.toLowerCase().contains("test")) {
+        options.errorprone {
+            check("NullAway", CheckSeverity.ERROR)
+            option("NullAway:AnnotatedPackages", "org.example")
+            option("NullAway:SerializeFixMetadata", "true")
+            option("NullAway:FixSerializationConfigPath", "/Users/raghuganapathy/Desktop/temp/PythonScripts/config/nullaway.xml")
+        }
+        options.compilerArgs << "-Xmaxerrs"<< "100000"
+        options.compilerArgs << "-Xmaxwarns" << "100000"
+    }
+}
 tasks.register("micronautCoreNextSnapshot", GradlePropertiesNextSnapshot) {
     propertyName = 'micronautCoreVersion'
 }
-
 tasks.register("micronautPlatformNextSnapshot", GradlePropertiesNextSnapshot) {
     propertyName = 'micronautVersion'
-}
-
-tasks.register("micronautCoreNotSnapshot", PropertiesNotSnapshot) {
-    propertyName = 'micronautCoreVersion'
-}
-
-tasks.register("micronautPlatformNotSnapshot", PropertiesNotSnapshot) {
-    propertyName = 'micronautVersion'
-}
-tasks.register("projectVersionNotSnapshot", PropertiesNotSnapshot) {
-    propertyName = 'projectVersion'
 }
